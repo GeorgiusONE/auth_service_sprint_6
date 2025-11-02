@@ -10,8 +10,8 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
-from db.postgres import get_session
-from db.redis_db import get_redis
+from src.db.postgres import get_session
+from src.db.redis_db import get_redis
 
 
 # Database dependencies

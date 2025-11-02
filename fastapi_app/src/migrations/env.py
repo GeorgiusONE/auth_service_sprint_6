@@ -1,4 +1,4 @@
-"""Alembic environment configuration."""
+аемger"""Alembic environment configuration."""
 import asyncio
 from logging.config import fileConfig
 from sqlalchemy import pool
@@ -24,8 +24,8 @@ target_metadata = Base.metadata
 # Set the sqlalchemy.url from environment variables
 config.set_main_option(
     "sqlalchemy.url",
-    f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@"
-    f"{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+    f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}@"
+    f"{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
 )
 
 

@@ -10,7 +10,7 @@ import json
 from redis import asyncio as aioredis
 from redis.asyncio import Redis, ConnectionPool
 
-from core.config import settings
+from src.core.config import settings
 
 
 # Create connection pool

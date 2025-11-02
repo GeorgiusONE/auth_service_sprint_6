@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import declarative_base
 
-from core.config import settings
+from src.core.config import settings
 
 # Create async engine
 engine = create_async_engine(
