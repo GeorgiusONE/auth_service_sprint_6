@@ -49,25 +49,23 @@ async def get_current_user_info(
 ) -> UserDetailResponse:
     """
     Get detailed information about the current authenticated user.
-    
+
     Returns:
     - User ID, login, name
     - List of assigned roles
     - Superuser status
     - Account creation date
-    
+
     Requires authentication (Bearer token in Authorization header).
     """
     try:
         user_service = UserService(db, redis)
-        
+
         # Get user with roles
-        user_with_roles = await user_service.get_user_with_roles(
-            user_id=current_user.id
-        )
-        
+        user_with_roles = await user_service.get_user_with_roles(user_id=current_user.id)
+
         return user_with_roles
-        
+
     except Exception as e:
         logger.error(f"Error getting user info: {str(e)}")
         raise HTTPException(
@@ -96,11 +94,11 @@ async def get_login_history(
 ) -> LoginHistoryResponse:
     """
     Get paginated login history for the current user.
-    
+
     Query parameters:
     - **page**: Page number (default: 1, minimum: 1)
     - **size**: Items per page (default: 20, minimum: 1, maximum: 100)
-    
+
     Returns:
     - List of login attempts with device information
     - User agent string
@@ -109,21 +107,21 @@ async def get_login_history(
     - Timestamp
     - Success status
     - Pagination metadata (total, pages)
-    
+
     Requires authentication (Bearer token in Authorization header).
     """
     try:
         user_service = UserService(db, redis)
-        
+
         # Get login history with pagination
         history = await user_service.get_login_history(
             user_id=current_user.id,
             page=page,
             size=size,
         )
-        
+
         return history
-        
+
     except Exception as e:
         logger.error(f"Error getting login history: {str(e)}")
         raise HTTPException(
@@ -152,26 +150,26 @@ async def change_password(
 ) -> MessageResponse:
     """
     Change the password for the current user.
-    
+
     Request body:
     - **old_password**: Current password for verification
     - **new_password**: New password (min 8 characters, must meet strength requirements)
-    
+
     Password requirements:
     - Minimum 8 characters
     - At least one uppercase letter
     - At least one lowercase letter
     - At least one digit
     - At least one special character
-    
+
     For security, this operation will logout the user from all other devices.
-    
+
     Requires authentication (Bearer token in Authorization header).
     """
     try:
         user_service = UserService(db, redis)
-        auth_service = AuthService(db, redis)
-        
+        AuthService(db, redis)
+
         # Change password (this also performs logout_all for security)
         await user_service.change_password(
             user_id=current_user.id,
@@ -179,11 +177,11 @@ async def change_password(
             new_password=password_data.new_password,
             logout_all=True,
         )
-        
+
         logger.info(f"Password changed for user: {current_user.login}")
-        
+
         return MessageResponse(message="Password updated successfully")
-        
+
     except InvalidPasswordError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -7,7 +7,6 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import (
     RoleAlreadyAssignedError,
@@ -39,7 +38,7 @@ class RoleService:
 
     def __init__(self, db: AsyncSession, redis: Redis):
         """Initialize role service.
-        
+
         Args:
             db: Database session
             redis: Redis client
@@ -52,13 +51,13 @@ class RoleService:
         role_data: RoleCreate,
     ) -> RoleResponse:
         """Create a new role.
-        
+
         Args:
             role_data: Role creation data
-            
+
         Returns:
             Created role information
-            
+
         Raises:
             RoleAlreadyExistsError: If role with this name already exists
         """
@@ -66,19 +65,19 @@ class RoleService:
         stmt = select(Role).where(Role.name == role_data.name)
         result = await self.db.execute(stmt)
         existing_role = result.scalar_one_or_none()
-        
+
         if existing_role:
             logger.warning(f"Role creation attempt with existing name: {role_data.name}")
             raise RoleAlreadyExistsError()
-        
+
         # Create role
         new_role = Role(
             name=role_data.name,
             description=role_data.description,
         )
-        
+
         self.db.add(new_role)
-        
+
         try:
             await self.db.commit()
             await self.db.refresh(new_role)
@@ -86,9 +85,9 @@ class RoleService:
             await self.db.rollback()
             logger.error(f"IntegrityError creating role: {role_data.name}")
             raise RoleAlreadyExistsError()
-        
+
         logger.info(f"Role created: {new_role.name} (ID: {new_role.id})")
-        
+
         return RoleResponse(
             id=new_role.id,
             name=new_role.name,
@@ -98,14 +97,14 @@ class RoleService:
 
     async def get_roles(self) -> RolesListResponse:
         """Get all roles.
-        
+
         Returns:
             List of all roles
         """
         stmt = select(Role).order_by(Role.name)
         result = await self.db.execute(stmt)
         roles = result.scalars().all()
-        
+
         items = [
             RoleResponse(
                 id=role.id,
@@ -115,7 +114,7 @@ class RoleService:
             )
             for role in roles
         ]
-        
+
         return RolesListResponse(
             items=items,
             total=len(items),
@@ -126,24 +125,24 @@ class RoleService:
         role_id: UUID,
     ) -> RoleDetailResponse:
         """Get role by ID.
-        
+
         Args:
             role_id: Role ID
-            
+
         Returns:
             Role information
-            
+
         Raises:
             RoleNotFoundError: If role not found
         """
         stmt = select(Role).where(Role.id == role_id)
         result = await self.db.execute(stmt)
         role = result.scalar_one_or_none()
-        
+
         if not role:
             logger.warning(f"Role not found: {role_id}")
             raise RoleNotFoundError()
-        
+
         return RoleDetailResponse(
             id=role.id,
             name=role.name,
@@ -157,17 +156,17 @@ class RoleService:
         name: str,
     ) -> Optional[Role]:
         """Get role by name.
-        
+
         Args:
             name: Role name
-            
+
         Returns:
             Role object or None if not found
         """
         stmt = select(Role).where(Role.name == name)
         result = await self.db.execute(stmt)
         role = result.scalar_one_or_none()
-        
+
         return role
 
     async def update_role(
@@ -176,14 +175,14 @@ class RoleService:
         role_data: RoleUpdate,
     ) -> RoleDetailResponse:
         """Update role information.
-        
+
         Args:
             role_id: Role ID
             role_data: Role update data
-            
+
         Returns:
             Updated role information
-            
+
         Raises:
             RoleNotFoundError: If role not found
             RoleAlreadyExistsError: If new name already exists
@@ -192,27 +191,27 @@ class RoleService:
         stmt = select(Role).where(Role.id == role_id)
         result = await self.db.execute(stmt)
         role = result.scalar_one_or_none()
-        
+
         if not role:
             logger.warning(f"Role not found for update: {role_id}")
             raise RoleNotFoundError()
-        
+
         # Check if new name already exists (if name is being changed)
         if role_data.name and role_data.name != role.name:
             existing_stmt = select(Role).where(Role.name == role_data.name)
             existing_result = await self.db.execute(existing_stmt)
             existing_role = existing_result.scalar_one_or_none()
-            
+
             if existing_role:
                 logger.warning(f"Role update attempt with existing name: {role_data.name}")
                 raise RoleAlreadyExistsError()
-            
+
             role.name = role_data.name
-        
+
         # Update description
         if role_data.description is not None:
             role.description = role_data.description
-        
+
         try:
             await self.db.commit()
             await self.db.refresh(role)
@@ -220,9 +219,9 @@ class RoleService:
             await self.db.rollback()
             logger.error(f"IntegrityError updating role: {role_id}")
             raise RoleAlreadyExistsError()
-        
+
         logger.info(f"Role updated: {role.name} (ID: {role_id})")
-        
+
         return RoleDetailResponse(
             id=role.id,
             name=role.name,
@@ -236,10 +235,10 @@ class RoleService:
         role_id: UUID,
     ) -> None:
         """Delete a role.
-        
+
         Args:
             role_id: Role ID
-            
+
         Raises:
             RoleNotFoundError: If role not found
         """
@@ -247,30 +246,27 @@ class RoleService:
         stmt = select(Role).where(Role.id == role_id)
         result = await self.db.execute(stmt)
         role = result.scalar_one_or_none()
-        
+
         if not role:
             logger.warning(f"Role not found for deletion: {role_id}")
             raise RoleNotFoundError()
-        
+
         # Get all users with this role for cache invalidation
         user_roles_stmt = select(UserRole).where(UserRole.role_id == role_id)
         user_roles_result = await self.db.execute(user_roles_stmt)
         user_roles = user_roles_result.scalars().all()
-        
+
         user_ids = [str(ur.user_id) for ur in user_roles]
-        
+
         # Delete role (CASCADE will delete user_roles)
         await self.db.delete(role)
         await self.db.commit()
-        
+
         # Invalidate cache for all affected users
         for user_id in user_ids:
             await invalidate_user_roles_cache(self.redis, user_id)
-        
-        logger.info(
-            f"Role deleted: {role.name} (ID: {role_id}), "
-            f"affected {len(user_ids)} users"
-        )
+
+        logger.info(f"Role deleted: {role.name} (ID: {role_id}), " f"affected {len(user_ids)} users")
 
     async def assign_role_to_user(
         self,
@@ -278,14 +274,14 @@ class RoleService:
         user_id: UUID,
     ) -> RoleAssignmentResponse:
         """Assign role to user.
-        
+
         Args:
             role_id: Role ID
             user_id: User ID
-            
+
         Returns:
             Assignment confirmation
-            
+
         Raises:
             RoleNotFoundError: If role not found
             UserNotFoundError: If user not found
@@ -295,20 +291,20 @@ class RoleService:
         role_stmt = select(Role).where(Role.id == role_id)
         role_result = await self.db.execute(role_stmt)
         role = role_result.scalar_one_or_none()
-        
+
         if not role:
             logger.warning(f"Role not found for assignment: {role_id}")
             raise RoleNotFoundError()
-        
+
         # Check if user exists
         user_stmt = select(User).where(User.id == user_id)
         user_result = await self.db.execute(user_stmt)
         user = user_result.scalar_one_or_none()
-        
+
         if not user:
             logger.warning(f"User not found for role assignment: {user_id}")
             raise UserNotFoundError()
-        
+
         # Check if assignment already exists
         existing_stmt = select(UserRole).where(
             UserRole.user_id == user_id,
@@ -316,38 +312,31 @@ class RoleService:
         )
         existing_result = await self.db.execute(existing_stmt)
         existing_assignment = existing_result.scalar_one_or_none()
-        
+
         if existing_assignment:
-            logger.warning(
-                f"Role already assigned: role={role_id}, user={user_id}"
-            )
+            logger.warning(f"Role already assigned: role={role_id}, user={user_id}")
             raise RoleAlreadyAssignedError()
-        
+
         # Create assignment
         user_role = UserRole(
             user_id=user_id,
             role_id=role_id,
         )
-        
+
         self.db.add(user_role)
-        
+
         try:
             await self.db.commit()
         except IntegrityError:
             await self.db.rollback()
-            logger.error(
-                f"IntegrityError assigning role: role={role_id}, user={user_id}"
-            )
+            logger.error(f"IntegrityError assigning role: role={role_id}, user={user_id}")
             raise RoleAlreadyAssignedError()
-        
+
         # Invalidate user roles cache
         await invalidate_user_roles_cache(self.redis, str(user_id))
-        
-        logger.info(
-            f"Role assigned: {role.name} to user {user.login} "
-            f"(role_id={role_id}, user_id={user_id})"
-        )
-        
+
+        logger.info(f"Role assigned: {role.name} to user {user.login} " f"(role_id={role_id}, user_id={user_id})")
+
         return RoleAssignmentResponse(
             message="Role assigned successfully",
             user_id=user_id,
@@ -360,11 +349,11 @@ class RoleService:
         user_id: UUID,
     ) -> None:
         """Remove role from user.
-        
+
         Args:
             role_id: Role ID
             user_id: User ID
-            
+
         Raises:
             RoleNotFoundError: If role or assignment not found
         """
@@ -375,24 +364,19 @@ class RoleService:
         )
         result = await self.db.execute(stmt)
         user_role = result.scalar_one_or_none()
-        
+
         if not user_role:
-            logger.warning(
-                f"Role assignment not found for removal: "
-                f"role={role_id}, user={user_id}"
-            )
+            logger.warning(f"Role assignment not found for removal: " f"role={role_id}, user={user_id}")
             raise RoleNotFoundError()
-        
+
         # Delete assignment
         await self.db.delete(user_role)
         await self.db.commit()
-        
+
         # Invalidate user roles cache
         await invalidate_user_roles_cache(self.redis, str(user_id))
-        
-        logger.info(
-            f"Role removed from user: role_id={role_id}, user_id={user_id}"
-        )
+
+        logger.info(f"Role removed from user: role_id={role_id}, user_id={user_id}")
 
     async def check_user_permission(
         self,
@@ -400,24 +384,21 @@ class RoleService:
         required_role: str,
     ) -> PermissionCheckResponse:
         """Check if user has required role.
-        
+
         Args:
             user_id: User ID
             required_role: Required role name
-            
+
         Returns:
             Permission check result
         """
         user_roles = await self.get_user_roles(user_id)
         role_names = [role.name for role in user_roles]
-        
+
         has_permission = required_role in role_names
-        
-        logger.debug(
-            f"Permission check for user {user_id}: "
-            f"required={required_role}, has={has_permission}"
-        )
-        
+
+        logger.debug(f"Permission check for user {user_id}: " f"required={required_role}, has={has_permission}")
+
         return PermissionCheckResponse(
             has_permission=has_permission,
             user_id=user_id,
@@ -430,16 +411,16 @@ class RoleService:
         use_cache: bool = True,
     ) -> List[Role]:
         """Get all roles for a user.
-        
+
         Args:
             user_id: User ID
             use_cache: Whether to use cache
-            
+
         Returns:
             List of user's roles
         """
         user_id_str = str(user_id)
-        
+
         # Try to get from cache
         if use_cache:
             cached_roles = await get_cached_user_roles(self.redis, user_id_str)
@@ -452,7 +433,7 @@ class RoleService:
                     # For now, return the cached data as is and let caller handle it
                     # In practice, we might want to return RoleResponse objects instead
                     pass
-        
+
         # Get from database
         stmt = (
             select(Role)
@@ -462,7 +443,7 @@ class RoleService:
         )
         result = await self.db.execute(stmt)
         roles = result.scalars().all()
-        
+
         # Cache the roles
         if use_cache and roles:
             roles_data = [
@@ -475,5 +456,5 @@ class RoleService:
                 for role in roles
             ]
             await cache_user_roles(self.redis, user_id_str, roles_data)
-        
+
         return list(roles)

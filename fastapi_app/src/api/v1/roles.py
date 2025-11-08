@@ -28,7 +28,6 @@ from src.core.exceptions import (
     RoleAlreadyExistsError,
     UserNotFoundError,
     RoleAlreadyAssignedError,
-    InsufficientPermissionsError,
 )
 
 
@@ -40,19 +39,16 @@ router = APIRouter(prefix="/roles", tags=["Roles"])
 def check_admin_or_superuser(current_user: User) -> None:
     """
     Helper function to check if user has admin or superuser privileges.
-    
+
     Args:
         current_user: Current authenticated user
-        
+
     Raises:
         HTTPException: If user doesn't have required privileges
     """
     if not current_user.is_superuser:
         # Check if user has admin role
-        has_admin = any(
-            user_role.role.name == "admin" 
-            for user_role in current_user.user_roles
-        )
+        has_admin = any(user_role.role.name == "admin" for user_role in current_user.user_roles)
         if not has_admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -81,27 +77,27 @@ async def create_role(
 ) -> RoleResponse:
     """
     Create a new role in the system.
-    
+
     Request body:
     - **name**: Unique role name (required)
     - **description**: Role description (optional)
-    
+
     Requires admin or superuser privileges.
     """
     check_admin_or_superuser(current_user)
-    
+
     try:
         role_service = RoleService(db, redis)
-        
+
         role = await role_service.create_role(
             name=role_data.name,
             description=role_data.description,
         )
-        
+
         logger.info(f"Role created: {role.name} by {current_user.login}")
-        
+
         return RoleResponse.model_validate(role)
-        
+
     except RoleAlreadyExistsError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -133,20 +129,20 @@ async def get_roles(
 ) -> RolesListResponse:
     """
     Get list of all roles in the system.
-    
+
     Returns:
     - List of all roles with id, name, description, creation date
     - Total count of roles
-    
+
     Requires authentication.
     """
     try:
         role_service = RoleService(db, redis)
-        
+
         roles_list = await role_service.get_roles()
-        
+
         return roles_list
-        
+
     except Exception as e:
         logger.error(f"Error getting roles: {str(e)}")
         raise HTTPException(
@@ -175,23 +171,23 @@ async def get_role(
 ) -> RoleDetailResponse:
     """
     Get detailed information about a specific role.
-    
+
     Path parameters:
     - **role_id**: UUID of the role
-    
+
     Returns:
     - Role id, name, description
     - Creation and last update timestamps
-    
+
     Requires authentication.
     """
     try:
         role_service = RoleService(db, redis)
-        
+
         role = await role_service.get_role_by_id(role_id=role_id)
-        
+
         return role
-        
+
     except RoleNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -227,31 +223,31 @@ async def update_role(
 ) -> RoleDetailResponse:
     """
     Update role information.
-    
+
     Path parameters:
     - **role_id**: UUID of the role to update
-    
+
     Request body (all fields optional):
     - **name**: New role name
     - **description**: New role description
-    
+
     Requires admin or superuser privileges.
     """
     check_admin_or_superuser(current_user)
-    
+
     try:
         role_service = RoleService(db, redis)
-        
+
         role = await role_service.update_role(
             role_id=role_id,
             name=role_data.name,
             description=role_data.description,
         )
-        
+
         logger.info(f"Role updated: {role_id} by {current_user.login}")
-        
+
         return role
-        
+
     except RoleNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -290,23 +286,23 @@ async def delete_role(
 ) -> None:
     """
     Delete a role from the system.
-    
+
     Path parameters:
     - **role_id**: UUID of the role to delete
-    
+
     Warning: This will also remove the role from all users who have it (CASCADE).
-    
+
     Requires admin or superuser privileges.
     """
     check_admin_or_superuser(current_user)
-    
+
     try:
         role_service = RoleService(db, redis)
-        
+
         await role_service.delete_role(role_id=role_id)
-        
+
         logger.info(f"Role deleted: {role_id} by {current_user.login}")
-        
+
     except RoleNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -343,29 +339,29 @@ async def assign_role(
 ) -> RoleAssignmentResponse:
     """
     Assign a role to a user.
-    
+
     Path parameters:
     - **role_id**: UUID of the role to assign
     - **user_id**: UUID of the user to receive the role
-    
+
     Returns confirmation with user_id and role_id.
-    
+
     Requires admin or superuser privileges.
     """
     check_admin_or_superuser(current_user)
-    
+
     try:
         role_service = RoleService(db, redis)
-        
+
         result = await role_service.assign_role_to_user(
             role_id=role_id,
             user_id=user_id,
         )
-        
+
         logger.info(f"Role {role_id} assigned to user {user_id} by {current_user.login}")
-        
+
         return result
-        
+
     except (RoleNotFoundError, UserNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -405,25 +401,25 @@ async def remove_role(
 ) -> None:
     """
     Remove a role from a user.
-    
+
     Path parameters:
     - **role_id**: UUID of the role to remove
     - **user_id**: UUID of the user to remove the role from
-    
+
     Requires admin or superuser privileges.
     """
     check_admin_or_superuser(current_user)
-    
+
     try:
         role_service = RoleService(db, redis)
-        
+
         await role_service.remove_role_from_user(
             role_id=role_id,
             user_id=user_id,
         )
-        
+
         logger.info(f"Role {role_id} removed from user {user_id} by {current_user.login}")
-        
+
     except (RoleNotFoundError, UserNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -456,29 +452,29 @@ async def check_permission(
 ) -> PermissionCheckResponse:
     """
     Check if the current user has a specific role.
-    
+
     Query parameters:
     - **role**: Name of the role to check (required)
-    
+
     Returns:
     - **has_permission**: True if user has the role, False otherwise
     - **user_id**: ID of the current user
     - **role**: Name of the checked role
-    
+
     Note: Superusers are considered to have all roles.
-    
+
     Requires authentication.
     """
     try:
         role_service = RoleService(db, redis)
-        
+
         result = await role_service.check_user_permission(
             user_id=current_user.id,
             role_name=role,
         )
-        
+
         return result
-        
+
     except Exception as e:
         logger.error(f"Error checking permission: {str(e)}")
         raise HTTPException(

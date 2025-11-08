@@ -5,7 +5,6 @@ Provides endpoints for user registration, login, token refresh, and logout.
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,12 +56,12 @@ async def signup(
 ) -> UserResponse:
     """
     Register a new user with the following data:
-    
+
     - **login**: unique username (min 3 characters)
     - **password**: user password (min 8 characters, will be hashed)
     - **first_name**: user's first name
     - **last_name**: user's last name
-    
+
     Returns the created user information without password.
     """
     try:
@@ -73,11 +72,11 @@ async def signup(
             first_name=user_data.first_name,
             last_name=user_data.last_name,
         )
-        
+
         logger.info(f"New user registered: {user.login}")
-        
+
         return UserResponse.model_validate(user)
-        
+
     except UserAlreadyExistsError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -117,12 +116,12 @@ async def login(
 ) -> TokenResponse:
     """
     Authenticate user and return access and refresh tokens.
-    
+
     - **login**: user's login
     - **password**: user's password
-    
+
     Returns a pair of JWT tokens (access + refresh).
-    
+
     The login attempt is recorded in the history with device information.
     """
     try:
@@ -131,9 +130,9 @@ async def login(
         ip_address = request.headers.get("x-forwarded-for")
         if not ip_address:
             ip_address = request.client.host if request.client else "Unknown"
-        
+
         auth_service = AuthService(db, redis)
-        
+
         # Authenticate user
         user = await auth_service.authenticate_user(
             login=credentials.login,
@@ -141,14 +140,14 @@ async def login(
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        
+
         # Create tokens
         tokens = await auth_service.create_tokens(user=user)
-        
+
         logger.info(f"User logged in: {user.login}")
-        
+
         return tokens
-        
+
     except InvalidCredentialsError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -186,24 +185,19 @@ async def refresh(
 ) -> AccessTokenResponse:
     """
     Refresh the access token using a valid refresh token.
-    
+
     - **refresh_token**: valid refresh token
-    
+
     Returns a new access token. The refresh token remains valid.
     """
     try:
         auth_service = AuthService(db, redis)
-        
+
         # Refresh access token
-        access_token = await auth_service.refresh_access_token(
-            refresh_token=refresh_data.refresh_token
-        )
-        
-        return AccessTokenResponse(
-            access_token=access_token,
-            token_type="bearer"
-        )
-        
+        access_token = await auth_service.refresh_access_token(refresh_token=refresh_data.refresh_token)
+
+        return AccessTokenResponse(access_token=access_token, token_type="bearer")
+
     except TokenInvalidError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -245,10 +239,10 @@ async def logout(
 ) -> None:
     """
     Logout from the current session.
-    
+
     The access token is added to the blacklist and becomes invalid.
     The refresh token (if provided in the body) is also removed from Redis.
-    
+
     Requires authentication (Bearer token in Authorization header).
     """
     try:
@@ -259,20 +253,20 @@ async def logout(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authorization header",
             )
-        
+
         access_token = auth_header.split(" ")[1]
-        
+
         auth_service = AuthService(db, redis)
-        
+
         # Logout (add access token to blacklist)
         await auth_service.logout(
             user_id=current_user.id,
             access_token=access_token,
             refresh_token=None,  # We don't have refresh token here
         )
-        
+
         logger.info(f"User logged out: {current_user.login}")
-        
+
     except Exception as e:
         logger.error(f"Error during logout: {str(e)}")
         raise HTTPException(
@@ -298,22 +292,22 @@ async def logout_all(
 ) -> None:
     """
     Logout from all devices/sessions.
-    
+
     This increments the user's token version, making all existing tokens invalid.
     All refresh tokens are also removed from Redis.
-    
+
     The user will need to login again on all devices.
-    
+
     Requires authentication (Bearer token in Authorization header).
     """
     try:
         auth_service = AuthService(db, redis)
-        
+
         # Logout from all devices
         await auth_service.logout_all(user_id=current_user.id)
-        
+
         logger.info(f"User logged out from all devices: {current_user.login}")
-        
+
     except Exception as e:
         logger.error(f"Error during logout from all devices: {str(e)}")
         raise HTTPException(

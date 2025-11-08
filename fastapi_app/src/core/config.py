@@ -43,17 +43,11 @@ class Settings(BaseSettings):
     # JWT Configuration
     jwt_secret_key: str = Field(..., alias="JWT_SECRET_KEY", min_length=32)
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
-    access_token_expire_minutes: int = Field(
-        default=15, alias="ACCESS_TOKEN_EXPIRE_MINUTES"
-    )
-    refresh_token_expire_days: int = Field(
-        default=30, alias="REFRESH_TOKEN_EXPIRE_DAYS"
-    )
+    access_token_expire_minutes: int = Field(default=15, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    refresh_token_expire_days: int = Field(default=30, alias="REFRESH_TOKEN_EXPIRE_DAYS")
 
     # CORS Configuration
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000"], alias="CORS_ORIGINS"
-    )
+    cors_origins: list[str] = Field(default=["http://localhost:3000"], alias="CORS_ORIGINS")
 
     # Server Configuration
     server_host: str = Field(default="0.0.0.0", alias="SERVER_HOST")

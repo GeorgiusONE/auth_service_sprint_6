@@ -41,7 +41,7 @@ Base = declarative_base()
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency function that provides database session.
-    
+
     Yields:
         AsyncSession: Database session
     """
@@ -64,7 +64,7 @@ async def init_db() -> None:
 async def close_db() -> None:
     """
     Close database connections.
-    
+
     Should be called on application shutdown.
     """
     await engine.dispose()

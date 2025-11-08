@@ -6,7 +6,6 @@ from typing import List
 
 from sqlalchemy import (
     Boolean,
-    Column,
     DateTime,
     ForeignKey,
     String,
@@ -25,44 +24,22 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), 
-        primary_key=True, 
-        default=uuid.uuid4
-    )
-    login: Mapped[str] = mapped_column(
-        String(255), 
-        unique=True, 
-        nullable=False,
-        index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    login: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     first_name: Mapped[str] = mapped_column(String(50), nullable=True)
     last_name: Mapped[str] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, 
-        default=datetime.utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, 
-        default=datetime.utcnow, 
-        onupdate=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     user_roles: Mapped[List["UserRole"]] = relationship(
-        "UserRole",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="selectin"
+        "UserRole", back_populates="user", cascade="all, delete-orphan", lazy="selectin"
     )
     login_history: Mapped[List["LoginHistory"]] = relationship(
-        "LoginHistory",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="select"
+        "LoginHistory", back_populates="user", cascade="all, delete-orphan", lazy="select"
     )
 
     def __repr__(self) -> str:
@@ -74,34 +51,15 @@ class Role(Base):
 
     __tablename__ = "roles"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), 
-        primary_key=True, 
-        default=uuid.uuid4
-    )
-    name: Mapped[str] = mapped_column(
-        String(100), 
-        unique=True, 
-        nullable=False,
-        index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, 
-        default=datetime.utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, 
-        default=datetime.utcnow, 
-        onupdate=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     user_roles: Mapped[List["UserRole"]] = relationship(
-        "UserRole",
-        back_populates="role",
-        cascade="all, delete-orphan",
-        lazy="selectin"
+        "UserRole", back_populates="role", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self) -> str:
@@ -118,37 +76,18 @@ class UserRole(Base):
         Index("idx_user_roles_role_id", "role_id"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), 
-        primary_key=True, 
-        default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("roles.id", ondelete="CASCADE"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False
     )
-    assigned_at: Mapped[datetime] = mapped_column(
-        DateTime, 
-        default=datetime.utcnow
-    )
+    assigned_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    user: Mapped["User"] = relationship(
-        "User",
-        back_populates="user_roles",
-        lazy="joined"
-    )
-    role: Mapped["Role"] = relationship(
-        "Role",
-        back_populates="user_roles",
-        lazy="joined"
-    )
+    user: Mapped["User"] = relationship("User", back_populates="user_roles", lazy="joined")
+    role: Mapped["Role"] = relationship("Role", back_populates="user_roles", lazy="joined")
 
     def __repr__(self) -> str:
         return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"
@@ -163,31 +102,18 @@ class LoginHistory(Base):
         Index("idx_login_history_login_at", "login_at"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), 
-        primary_key=True, 
-        default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     user_agent: Mapped[str] = mapped_column(Text, nullable=True)
     ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
     fingerprint: Mapped[str] = mapped_column(String(255), nullable=True)
-    login_at: Mapped[datetime] = mapped_column(
-        DateTime, 
-        default=datetime.utcnow
-    )
+    login_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     success: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Relationships
-    user: Mapped["User"] = relationship(
-        "User",
-        back_populates="login_history",
-        lazy="joined"
-    )
+    user: Mapped["User"] = relationship("User", back_populates="login_history", lazy="joined")
 
     def __repr__(self) -> str:
         return f"<LoginHistory(id={self.id}, user_id={self.user_id}, login_at={self.login_at})>"

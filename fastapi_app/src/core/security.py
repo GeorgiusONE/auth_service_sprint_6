@@ -81,15 +81,11 @@ def create_access_token(
         "iat": now,  # Issued at
     }
 
-    encoded_jwt = jwt.encode(
-        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
-    )
+    encoded_jwt = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
-def create_refresh_token(
-    user_id: str, expires_delta: timedelta | None = None
-) -> str:
+def create_refresh_token(user_id: str, expires_delta: timedelta | None = None) -> str:
     """
     Create JWT refresh token.
 
@@ -114,9 +110,7 @@ def create_refresh_token(
         "iat": now,  # Issued at
     }
 
-    encoded_jwt = jwt.encode(
-        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
-    )
+    encoded_jwt = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
@@ -165,9 +159,7 @@ def verify_token(token: str, expected_type: str = "access") -> dict[str, Any]:
         # Verify token type
         token_type = payload.get("token_type")
         if token_type != expected_type:
-            raise JWTError(
-                f"Invalid token type. Expected '{expected_type}', got '{token_type}'"
-            )
+            raise JWTError(f"Invalid token type. Expected '{expected_type}', got '{token_type}'")
 
         return payload
 
@@ -273,7 +265,7 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     if not any(c.isdigit() for c in password):
         return False, "Password must contain at least one digit"
 
-    special_chars = "!@#$%^&*(),.?\":{}|<>"
+    special_chars = '!@#$%^&*(),.?":{}|<>'
     if not any(c in special_chars for c in password):
         return False, "Password must contain at least one special character"
 

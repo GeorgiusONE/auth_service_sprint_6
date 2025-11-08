@@ -23,7 +23,6 @@ from src.core.exceptions import (
     TokenBlacklistedError,
     UserNotFoundError,
     UserInactiveError,
-    InsufficientPermissionsError,
 )
 
 
@@ -33,10 +32,11 @@ security = HTTPBearer()
 
 # Database dependencies
 
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Get database session dependency.
-    
+
     Yields:
         AsyncSession: Database session
     """
@@ -47,7 +47,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def get_redis_client() -> Redis:
     """
     Get Redis client dependency.
-    
+
     Returns:
         Redis: Redis client instance
     """
@@ -56,6 +56,7 @@ async def get_redis_client() -> Redis:
 
 # Authentication dependencies
 
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
@@ -63,40 +64,37 @@ async def get_current_user(
 ) -> User:
     """
     Get current authenticated user from JWT token.
-    
+
     Args:
         credentials: HTTP Bearer token credentials
         db: Database session
         redis: Redis client
-        
+
     Returns:
         User: Current authenticated user
-        
+
     Raises:
         HTTPException: If token is invalid, expired, or user not found
     """
     token = credentials.credentials
-    
+
     try:
         # Initialize auth service
         auth_service = AuthService(db, redis)
-        
+
         # Verify token and get payload
-        payload: TokenPayload = await auth_service.verify_token(
-            token=token,
-            token_type="access"
-        )
-        
+        payload: TokenPayload = await auth_service.verify_token(token=token, token_type="access")
+
         # Get user from database
         user_service = UserService(db, redis)
         user = await user_service.get_user_by_id(payload.sub)
-        
+
         # Check if user is active
         if not user.is_active:
             raise UserInactiveError()
-            
+
         return user
-        
+
     except TokenInvalidError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -137,13 +135,14 @@ async def get_current_user(
 def require_role(role_name: str) -> Callable:
     """
     Create a dependency that requires a specific role.
-    
+
     Args:
         role_name: Name of the required role
-        
+
     Returns:
         Callable: Dependency function that checks for the role
     """
+
     async def check_role(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
@@ -151,39 +150,37 @@ def require_role(role_name: str) -> Callable:
     ) -> User:
         """
         Check if user has the required role.
-        
+
         Args:
             current_user: Current authenticated user
             db: Database session
             redis: Redis client
-            
+
         Returns:
             User: Current user if they have the role
-            
+
         Raises:
             HTTPException: If user doesn't have the required role
         """
         # Superusers have all permissions
         if current_user.is_superuser:
             return current_user
-            
+
         # Check if user has the required role
         from src.services.role import RoleService
+
         role_service = RoleService(db, redis)
-        
-        result = await role_service.check_user_permission(
-            user_id=current_user.id,
-            role_name=role_name
-        )
-        
+
+        result = await role_service.check_user_permission(user_id=current_user.id, role_name=role_name)
+
         if not result.has_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Role '{role_name}' is required for this operation",
             )
-            
+
         return current_user
-        
+
     return check_role
 
 
@@ -192,13 +189,13 @@ async def require_superuser(
 ) -> User:
     """
     Require that the current user is a superuser.
-    
+
     Args:
         current_user: Current authenticated user
-        
+
     Returns:
         User: Current user if they are a superuser
-        
+
     Raises:
         HTTPException: If user is not a superuser
     """
@@ -207,7 +204,7 @@ async def require_superuser(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superuser access required",
         )
-        
+
     return current_user
 
 
@@ -218,37 +215,36 @@ def require_admin_or_superuser(
 ) -> User:
     """
     Require that the current user is either admin or superuser.
-    
+
     Args:
         current_user: Current authenticated user
         db: Database session
         redis: Redis client
-        
+
     Returns:
         User: Current user if they have admin privileges
-        
+
     Raises:
         HTTPException: If user is neither admin nor superuser
     """
     # Superusers always have access
     if current_user.is_superuser:
         return current_user
-    
+
     # Check if user has admin role
     from src.services.role import RoleService
+
     role_service = RoleService(db, redis)
-    
+
     # This will be executed synchronously in the dependency
     import asyncio
-    result = asyncio.run(role_service.check_user_permission(
-        user_id=current_user.id,
-        role_name="admin"
-    ))
-    
+
+    result = asyncio.run(role_service.check_user_permission(user_id=current_user.id, role_name="admin"))
+
     if not result.has_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin or superuser access required",
         )
-        
+
     return current_user

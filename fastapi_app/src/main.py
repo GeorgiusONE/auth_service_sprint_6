@@ -29,8 +29,8 @@ from src.models.schemas import HealthCheckResponse, DependencyStatus
 # Настройка логирования
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -39,48 +39,48 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Управление жизненным циклом приложения.
-    
+
     Startup:
     - Инициализация PostgreSQL
     - Инициализация Redis
-    
+
     Shutdown:
     - Закрытие соединений PostgreSQL
     - Закрытие соединений Redis
     """
     # Startup
     logger.info("Starting up Auth Service...")
-    
+
     try:
         # Инициализация PostgreSQL
         await init_db()
         logger.info("PostgreSQL connection initialized")
-        
+
         # Инициализация Redis
         await init_redis()
         logger.info("Redis connection initialized")
-        
+
         logger.info(f"Auth Service started successfully on {settings.server_host}:{settings.server_port}")
         logger.info(f"Debug mode: {settings.debug}")
         logger.info(f"API documentation available at http://{settings.server_host}:{settings.server_port}/docs")
     except Exception as e:
         logger.error(f"Failed to start Auth Service: {e}")
         raise
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Auth Service...")
-    
+
     try:
         # Закрытие PostgreSQL
         await close_db()
         logger.info("PostgreSQL connection closed")
-        
+
         # Закрытие Redis
         await close_redis()
         logger.info("Redis connection closed")
-        
+
         logger.info("Auth Service shut down successfully")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
@@ -146,13 +146,10 @@ logger.info(f"CORS configured with origins: {settings.cors_origins}")
 
 # Custom Exception Handlers
 @app.exception_handler(AuthServiceException)
-async def auth_service_exception_handler(
-    request: Request,
-    exc: AuthServiceException
-) -> JSONResponse:
+async def auth_service_exception_handler(request: Request, exc: AuthServiceException) -> JSONResponse:
     """
     Обработчик кастомных исключений сервиса аутентификации.
-    
+
     Конвертирует AuthServiceException в HTTP response с правильным
     статус-кодом и структурой согласно ErrorResponse схеме.
     """
@@ -163,9 +160,9 @@ async def auth_service_exception_handler(
             "status_code": exc.status_code,
             "path": request.url.path,
             "method": request.method,
-        }
+        },
     )
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.to_dict(),
@@ -173,13 +170,10 @@ async def auth_service_exception_handler(
 
 
 @app.exception_handler(Exception)
-async def general_exception_handler(
-    request: Request,
-    exc: Exception
-) -> JSONResponse:
+async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Обработчик всех остальных неожиданных исключений.
-    
+
     Логирует полную информацию об ошибке и возвращает
     generic error response клиенту.
     """
@@ -189,9 +183,9 @@ async def general_exception_handler(
         extra={
             "path": request.url.path,
             "method": request.method,
-        }
+        },
     )
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -213,11 +207,11 @@ async def general_exception_handler(
 async def health_check() -> HealthCheckResponse:
     """
     Проверка здоровья сервиса.
-    
+
     Проверяет:
     - Доступность PostgreSQL
     - Доступность Redis
-    
+
     Returns:
         HealthCheckResponse: Статус сервиса и его зависимостей
     """
@@ -229,7 +223,7 @@ async def health_check() -> HealthCheckResponse:
             postgres_status = "connected"
     except Exception as e:
         logger.error(f"PostgreSQL health check failed: {e}")
-    
+
     # Проверка Redis
     redis_status = "disconnected"
     try:
@@ -237,18 +231,17 @@ async def health_check() -> HealthCheckResponse:
         redis_status = "connected"
     except Exception as e:
         logger.error(f"Redis health check failed: {e}")
-    
+
     # Определение общего статуса
     is_healthy = postgres_status == "connected" and redis_status == "connected"
     overall_status = "healthy" if is_healthy else "unhealthy"
-    
+
     # Логирование
     if not is_healthy:
         logger.warning(
-            f"Health check failed - Status: {overall_status}, "
-            f"PostgreSQL: {postgres_status}, Redis: {redis_status}"
+            f"Health check failed - Status: {overall_status}, " f"PostgreSQL: {postgres_status}, Redis: {redis_status}"
         )
-    
+
     response = HealthCheckResponse(
         status=overall_status,
         timestamp=datetime.utcnow(),
@@ -258,13 +251,13 @@ async def health_check() -> HealthCheckResponse:
             redis=redis_status,
         ),
     )
-    
+
     # Возврат 503 если сервис нездоров
     status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
-    
+
     return JSONResponse(
         status_code=status_code,
-        content=response.model_dump(mode='json'),
+        content=response.model_dump(mode="json"),
     )
 
 
@@ -299,7 +292,7 @@ logger.info("Roles router registered at /api/v1/roles")
 async def root() -> dict[str, Any]:
     """
     Корневой endpoint.
-    
+
     Возвращает базовую информацию о сервисе и ссылки на документацию.
     """
     return {
@@ -322,7 +315,7 @@ async def root() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "src.main:app",
         host=settings.server_host,

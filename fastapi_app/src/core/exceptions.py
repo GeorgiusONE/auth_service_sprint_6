@@ -95,9 +95,7 @@ class TokenBlacklistedError(AuthServiceException):
 class InsufficientPermissionsError(AuthServiceException):
     """User has insufficient permissions."""
 
-    def __init__(
-        self, detail: str = "Insufficient permissions to perform this action"
-    ) -> None:
+    def __init__(self, detail: str = "Insufficient permissions to perform this action") -> None:
         super().__init__(
             detail=detail,
             error_code="INSUFFICIENT_PERMISSIONS",
@@ -191,9 +189,7 @@ class RoleNotFoundError(AuthServiceException):
 class UserAlreadyExistsError(AuthServiceException):
     """User with this login already exists."""
 
-    def __init__(
-        self, detail: str = "User with this login already exists"
-    ) -> None:
+    def __init__(self, detail: str = "User with this login already exists") -> None:
         super().__init__(
             detail=detail,
             error_code="USER_ALREADY_EXISTS",
@@ -204,9 +200,7 @@ class UserAlreadyExistsError(AuthServiceException):
 class RoleAlreadyExistsError(AuthServiceException):
     """Role with this name already exists."""
 
-    def __init__(
-        self, detail: str = "Role with this name already exists"
-    ) -> None:
+    def __init__(self, detail: str = "Role with this name already exists") -> None:
         super().__init__(
             detail=detail,
             error_code="ROLE_ALREADY_EXISTS",
