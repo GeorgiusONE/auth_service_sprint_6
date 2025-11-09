@@ -44,8 +44,13 @@ COPY --from=builder /root/.local /home/appuser/.local
 
 # Copy application code
 COPY --chown=appuser:appuser fastapi_app/ ./fastapi_app/
-COPY --chown=appuser:appuser alembic.ini .
 COPY --chown=appuser:appuser .env .
+
+# Change working directory to fastapi_app for correct imports
+WORKDIR /app/fastapi_app
+
+# Copy alembic.ini to the correct location
+COPY --chown=appuser:appuser alembic.ini .
 
 # Update PATH
 ENV PATH=/home/appuser/.local/bin:$PATH
@@ -61,4 +66,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
 # Run application
-CMD ["uvicorn", "fastapi_app.src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
